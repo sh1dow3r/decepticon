@@ -34,7 +34,7 @@ The system consists of the following components:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/decepticon.git
+   git clone https://github.com/sh1dow3r/decepticon.git
    cd decepticon
    ```
 
