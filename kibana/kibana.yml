@@ -1,0 +1,30 @@
+# Kibana configuration for honeypot dashboard
+
+# Server settings
+server.name: kibana
+server.host: "0.0.0.0"
+server.port: 5601
+
+# Elasticsearch settings
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.requestTimeout: 30000
+
+# Kibana settings
+kibana.index: ".kibana"
+
+# Logging settings
+logging.dest: stdout
+logging.quiet: false
+logging.verbose: false
+
+# Security settings
+xpack.security.enabled: false
+
+# Telemetry settings
+telemetry.enabled: false
+
+# Disable features we don't need
+xpack.reporting.enabled: false
+xpack.apm.ui.enabled: false
+xpack.graph.enabled: false
+xpack.ml.enabled: false

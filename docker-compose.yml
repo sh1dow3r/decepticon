@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    container_name: decepticon-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - decepticon-network
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    container_name: decepticon-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - decepticon-network
+    restart: on-failure
+
+  daas:
+    build: .
+    container_name: decepticon-api
+    environment:
+      SERVER_ADDRESS: ":8080"
+      ADMIN_API_ADDRESS: ":8081"
+      LOG_FILE_PATH: "/root/logs/honeypot.log"
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
+      ELASTICSEARCH_INDEX: "honeypot-logs"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    networks:
+      - decepticon-network
+    restart: on-failure
+
+  webconsole:
+    build:
+      context: .
+      dockerfile: cmd/webconsole/Dockerfile
+    container_name: decepticon-console
+    ports:
+      - "8082:8082"
+    networks:
+      - decepticon-network
+    restart: on-failure
+
+  ssh_honeypot:
+    image: cowrie/cowrie:latest
+    container_name: decepticon-ssh
+    volumes:
+      - ./honeypots/cowrie/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg
+      - ./honeypots/cowrie/userdb.txt:/cowrie/cowrie-git/etc/userdb.txt
+    ports:
+      - "2222:2222"
+    networks:
+      - decepticon-network
+    restart: on-failure
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  smb_honeypot:
+    build:
+      context: ./honeypots/samba
+    container_name: decepticon-smb
+    ports:
+      - "445:445"
+    networks:
+      - decepticon-network
+    restart: on-failure
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  ftp_honeypot:
+    build:
+      context: ./honeypots/ftp
+    container_name: decepticon-ftp
+    ports:
+      - "21:21"
+    networks:
+      - decepticon-network
+    restart: on-failure
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  es_data:
+    name: decepticon-elasticsearch-data
+    driver: local
+
+networks:
+  decepticon-network:
+    name: decepticon-network
+    driver: bridge

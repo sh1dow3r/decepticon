@@ -1,0 +1,12 @@
+# Use a pre-built Cowrie image
+FROM cowrie/cowrie:latest
+
+# Copy configuration file
+COPY cowrie.cfg /cowrie/cowrie-git/etc/cowrie.cfg
+COPY userdb.txt /cowrie/cowrie-git/etc/userdb.txt
+
+# Expose SSH port
+EXPOSE 2222
+
+# Start Cowrie
+CMD ["/cowrie/cowrie-git/bin/cowrie", "start", "-n"]

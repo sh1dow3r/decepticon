@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Honeypot Management Console</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .status.ok {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Honeypot Management Console</h1>
+
+    <div class="card">
+        <h2>System Status</h2>
+        <p><strong>Status:</strong> <span id="status" class="status">Loading...</span></p>
+        <p><strong>Version:</strong> <span id="version">Loading...</span></p>
+        <p><strong>Elasticsearch:</strong> <span id="elasticsearch" class="status">Loading...</span></p>
+        <button onclick="checkStatus()">Refresh</button>
+    </div>
+
+    <div class="card">
+        <h2>Statistics</h2>
+        <p><strong>Total Connections:</strong> <span id="connections">Loading...</span></p>
+        <button onclick="checkStatus()">Refresh</button>
+    </div>
+
+    <script>
+        function checkStatus() {
+            fetch('http://localhost:8081/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').textContent = data.status;
+                    document.getElementById('status').className = 'status ' + (data.status === 'ok' ? 'ok' : 'error');
+
+                    document.getElementById('version').textContent = data.version;
+
+                    document.getElementById('elasticsearch').textContent = data.elasticsearch.status;
+                    document.getElementById('elasticsearch').className = 'status ' + (data.elasticsearch.status === 'ok' ? 'ok' : 'error');
+
+                    document.getElementById('connections').textContent = data.stats.total_connections;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('status').textContent = 'Error';
+                    document.getElementById('status').className = 'status error';
+                });
+        }
+
+        // Check status on page load
+        checkStatus();
+
+        // Check status every 30 seconds
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - daas-network
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - daas-network
+    restart: on-failure
+
+  daas:
+    build: .
+    environment:
+      SERVER_ADDRESS: ":8080"
+      ADMIN_API_ADDRESS: ":8081"
+      LOG_FILE_PATH: "/root/logs/honeypot.log"
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
+      ELASTICSEARCH_INDEX: "honeypot-logs"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    networks:
+      - daas-network
+    restart: on-failure
+
+  webconsole:
+    build:
+      context: .
+      dockerfile: cmd/webconsole/Dockerfile
+    ports:
+      - "8082:8082"
+    networks:
+      - daas-network
+    restart: on-failure
+
+  ssh_honeypot:
+    build:
+      context: ./honeypots/cowrie
+      dockerfile: Dockerfile.simple
+    ports:
+      - "2222:2222"
+    networks:
+      - daas-network
+    restart: on-failure
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  smb_honeypot:
+    build:
+      context: ./honeypots/samba
+    ports:
+      - "445:445"
+    networks:
+      - daas-network
+    restart: on-failure
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  ftp_honeypot:
+    build:
+      context: ./honeypots/ftp
+    ports:
+      - "21:21"
+    networks:
+      - daas-network
+    restart: on-failure
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  es_data:
+    driver: local
+
+networks:
+  daas-network:
+    driver: bridge
